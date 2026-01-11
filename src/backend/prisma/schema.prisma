@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// 사용자 관리
+// ============================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 관계
+  calculations Calculation[]
+
+  @@map("users")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ============================================
+// 대학/학과 정보
+// ============================================
+
+model University {
+  id        String   @id @default(cuid())
+  name      String
+  region    String?
+  type      String?  // 국공립/사립
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 관계
+  departments Department[]
+
+  @@map("universities")
+}
+
+model Department {
+  id           String   @id @default(cuid())
+  universityId String
+  name         String
+  recruitGroup String?  // 가군/나군/다군
+  recruitCount Int?     // 모집인원
+  year         Int      @default(2026)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // 계산 공식 (JSON)
+  formula      Json?    // FormulaData 타입
+
+  // 관계
+  university   University     @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  calculations Calculation[]
+
+  @@map("departments")
+}
+
+// ============================================
+// 점수 계산 내역
+// ============================================
+
+model Calculation {
+  id           String         @id @default(cuid())
+  userId       String
+  departmentId String
+  type         CalculationType
+
+  // 입력 데이터 (JSON)
+  inputData    Json
+
+  // 계산 결과 (JSON)
+  resultData   Json
+
+  // 메타
+  createdAt    DateTime       @default(now())
+
+  // 관계
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department   Department     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@map("calculations")
+}
+
+enum CalculationType {
+  SUNEUNG
+  PRACTICAL
+  COMBINED
+}
+
+// ============================================
+// 변경 이력
+// ============================================
+
+model ChangeLog {
+  id         String   @id @default(cuid())
+  tableName  String
+  recordId   String
+  action     String   // CREATE/UPDATE/DELETE
+  oldData    Json?
+  newData    Json?
+  changedBy  String
+  changedAt  DateTime @default(now())
+
+  @@map("change_logs")
+}

@@ -1,0 +1,18 @@
+# Project S Backend - Caddy Configuration
+# 도메인 설정 후 아래 수정 필요
+
+# 개발용 (localhost)
+:3001 {
+    reverse_proxy localhost:3001
+}
+
+# 프로덕션용 (도메인 설정 시)
+# api.projects.chejump.com {
+#     reverse_proxy localhost:3001
+#
+#     header {
+#         Access-Control-Allow-Origin https://projects.vercel.app
+#         Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+#         Access-Control-Allow-Headers "Authorization, Content-Type"
+#     }
+# }
