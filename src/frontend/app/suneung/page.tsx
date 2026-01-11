@@ -48,7 +48,7 @@ export default function SuneungPage() {
       return;
     }
     // 다음 페이지로 이동 (대학 검색)
-    router.push('/university-search');
+    router.push('/university');
   };
 
   return (
