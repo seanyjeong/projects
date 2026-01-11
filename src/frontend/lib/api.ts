@@ -169,6 +169,89 @@ export const scoreApi = {
     }),
 };
 
+// API 응답 타입 (백엔드에서 오는 실제 구조)
+interface ApiDepartment {
+  id: string;
+  universityId: string;
+  name: string; // 학과명
+  recruitGroup: '가' | '나' | '다';
+  recruitCount: number;
+  year: number;
+  formula: {
+    silgiRatio: number;
+    silgiEvents: Array<{
+      name: string;
+      unit: string;
+      gender: string;
+      maxScore: number;
+    }>;
+    suneungRatio: number;
+    suneungTypes: Record<string, string>;
+    englishGrades: Record<string, number>;
+    suneungWeights: {
+      math: number;
+      tamgu: number;
+      korean: number;
+      english: number;
+      history: number;
+    };
+  };
+  university: {
+    id: string;
+    name: string; // 대학명
+    region: string;
+    type: string;
+  };
+}
+
+// 군 변환 맵
+const GROUP_MAP: Record<string, 'ga' | 'na' | 'da'> = {
+  '가': 'ga',
+  '나': 'na',
+  '다': 'da',
+};
+
+// API 응답을 프론트엔드 타입으로 변환
+function transformDepartment(dept: ApiDepartment): University {
+  const formula = dept.formula || {};
+  const weights = formula.suneungWeights || {};
+  const silgiEvents = formula.silgiEvents || [];
+
+  // 실기 종목을 requirements.silgi 형식으로 변환
+  const silgiRequirements: University['requirements']['silgi'] = {};
+  silgiEvents.forEach((event) => {
+    silgiRequirements[event.name] = {
+      name: event.name,
+      unit: event.unit,
+      male: { min: 0, max: event.maxScore },
+      female: { min: 0, max: event.maxScore },
+    };
+  });
+
+  return {
+    id: dept.id,
+    name: dept.university?.name || '알 수 없음', // 대학명
+    department: dept.name, // 학과명
+    group: GROUP_MAP[dept.recruitGroup] || 'ga',
+    region: dept.university?.region || '',
+    quota: dept.recruitCount || 0,
+    requirements: {
+      suneung: {
+        korean: weights.korean || 0,
+        math: weights.math || 0,
+        english: weights.english || 0,
+        inquiry: weights.tamgu || 0,
+        koreanHistory: weights.history || 0,
+      },
+      silgi: silgiRequirements,
+    },
+    ratio: {
+      suneung: formula.suneungRatio || 0,
+      silgi: formula.silgiRatio || 0,
+    },
+  };
+}
+
 export const universityApi = {
   // 전체 대학 목록
   getAll: () => api.get<University[]>('/universities'),
@@ -177,18 +260,21 @@ export const universityApi = {
   getById: (id: string) => api.get<University>(`/universities/${id}`),
 
   // 학과 검색 (departments/search)
-  searchDepartments: (params: {
+  searchDepartments: async (params: {
     q?: string;
     recruitGroup?: string;
     region?: string;
     year?: number;
-  }) => {
+  }): Promise<University[]> => {
     const searchParams = new URLSearchParams();
     if (params.q) searchParams.append('q', params.q);
     if (params.recruitGroup) searchParams.append('recruitGroup', params.recruitGroup);
     if (params.region) searchParams.append('region', params.region);
     if (params.year) searchParams.append('year', params.year.toString());
 
-    return api.get<University[]>(`/departments/search?${searchParams.toString()}`);
+    const rawData = await api.get<ApiDepartment[]>(`/departments/search?${searchParams.toString()}`);
+
+    // API 응답을 프론트엔드 타입으로 변환
+    return rawData.map(transformDepartment);
   },
 };
