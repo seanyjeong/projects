@@ -243,7 +243,7 @@ export default function Home() {
               체육계열 입시를 준비하는 모든 학생들을 응원합니다
             </p>
             <p className="text-xs text-white/30">
-              v1.0.2 | Build: {process.env.NEXT_PUBLIC_BUILD_TIME || new Date().toISOString().slice(0, 16)}
+              v1.0.3 | Build: {process.env.NEXT_PUBLIC_BUILD_TIME || new Date().toISOString().slice(0, 16)}
             </p>
           </div>
         </div>

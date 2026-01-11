@@ -1,6 +1,6 @@
 'use client';
 
-import { useSuneungStore, TamguSubject, MathSubject } from '@/lib/store/suneung-store';
+import { useSuneungStore, TamguSubject, MathSubject, KoreanSubject } from '@/lib/store/suneung-store';
 import { ScoreInput } from '@/components/suneung/ScoreInput';
 import { SubjectSelect } from '@/components/suneung/SubjectSelect';
 import { ExamTypeSelector } from '@/components/suneung/ExamTypeSelector';
@@ -8,7 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Calculator } from 'lucide-react';
+import { ArrowRight, Calculator, AlertCircle } from 'lucide-react';
+
+// 국어 선택과목 옵션
+const koreanSubjects: { value: KoreanSubject; label: string }[] = [
+  { value: '화법과작문', label: '화법과 작문' },
+  { value: '언어와매체', label: '언어와 매체' },
+];
 
 // 수학 선택과목 옵션
 const mathSubjects: { value: MathSubject; label: string }[] = [
@@ -66,16 +72,83 @@ export default function SuneungPage() {
         {/* 시험 종류 선택 */}
         <ExamTypeSelector selected={data.examType} onChange={updateExamType} />
 
+        {/* 입력 안내 */}
+        <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-800 dark:text-blue-200">
+              <p className="font-medium mb-1">수능 성적표를 준비해주세요</p>
+              <p className="text-blue-600 dark:text-blue-300">
+                각 과목의 표준점수, 백분위, 등급을 입력해주세요.
+                빈칸으로 두시면 다음 단계로 진행할 수 없습니다.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* 국어 */}
-        <ScoreInput
-          subjectName="국어"
-          standardScore={data.korean.standardScore}
-          percentile={data.korean.percentile}
-          grade={data.korean.grade}
-          onStandardScoreChange={(value) => updateKorean({ standardScore: value })}
-          onPercentileChange={(value) => updateKorean({ percentile: value })}
-          onGradeChange={(value) => updateKorean({ grade: value })}
-        />
+        <div className="p-5 bg-card border border-border rounded-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-foreground">국어</h3>
+            <SubjectSelect
+              label=""
+              value={data.korean.subject}
+              onChange={(value) => updateKorean({ subject: value as KoreanSubject })}
+              options={koreanSubjects}
+              id="korean-subject"
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Label htmlFor="korean-std" className="text-sm mb-2 block text-muted-foreground">
+                표준점수 <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="korean-std"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="예: 131"
+                value={data.korean.standardScore}
+                onChange={(e) => updateKorean({ standardScore: e.target.value.replace(/[^0-9]/g, '') })}
+                className={`text-center font-mono h-12 ${!data.korean.standardScore ? 'border-amber-400' : ''}`}
+              />
+            </div>
+
+            <div className="flex-1">
+              <Label htmlFor="korean-per" className="text-sm mb-2 block text-muted-foreground">
+                백분위 <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="korean-per"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="예: 95"
+                value={data.korean.percentile}
+                onChange={(e) => updateKorean({ percentile: e.target.value.replace(/[^0-9]/g, '') })}
+                className={`text-center font-mono h-12 ${!data.korean.percentile ? 'border-amber-400' : ''}`}
+              />
+            </div>
+
+            <div className="w-20">
+              <Label htmlFor="korean-grade" className="text-sm mb-2 block text-muted-foreground">
+                등급 <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="korean-grade"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="예: 2"
+                value={data.korean.grade}
+                onChange={(e) => updateKorean({ grade: e.target.value.replace(/[^0-9]/g, '') })}
+                className={`text-center font-mono h-12 ${!data.korean.grade ? 'border-amber-400' : ''}`}
+              />
+            </div>
+          </div>
+        </div>
 
         {/* 수학 */}
         <div className="p-5 bg-card border border-border rounded-xl space-y-4">
@@ -93,49 +166,49 @@ export default function SuneungPage() {
           <div className="flex gap-3">
             <div className="flex-1">
               <Label htmlFor="math-std" className="text-sm mb-2 block text-muted-foreground">
-                표준점수
+                표준점수 <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="math-std"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="130"
+                placeholder="예: 134"
                 value={data.math.standardScore}
                 onChange={(e) => updateMath({ standardScore: e.target.value.replace(/[^0-9]/g, '') })}
-                className="text-center font-mono h-12"
+                className={`text-center font-mono h-12 ${!data.math.standardScore ? 'border-amber-400' : ''}`}
               />
             </div>
 
             <div className="flex-1">
               <Label htmlFor="math-per" className="text-sm mb-2 block text-muted-foreground">
-                백분위
+                백분위 <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="math-per"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="95"
+                placeholder="예: 96"
                 value={data.math.percentile}
                 onChange={(e) => updateMath({ percentile: e.target.value.replace(/[^0-9]/g, '') })}
-                className="text-center font-mono h-12"
+                className={`text-center font-mono h-12 ${!data.math.percentile ? 'border-amber-400' : ''}`}
               />
             </div>
 
             <div className="w-20">
               <Label htmlFor="math-grade" className="text-sm mb-2 block text-muted-foreground">
-                등급
+                등급 <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="math-grade"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="2"
+                placeholder="예: 2"
                 value={data.math.grade}
                 onChange={(e) => updateMath({ grade: e.target.value.replace(/[^0-9]/g, '') })}
-                className="text-center font-mono h-12"
+                className={`text-center font-mono h-12 ${!data.math.grade ? 'border-amber-400' : ''}`}
               />
             </div>
           </div>
@@ -144,19 +217,20 @@ export default function SuneungPage() {
         {/* 영어 (등급만) */}
         <div className="p-5 bg-card border border-border rounded-xl space-y-4">
           <h3 className="text-lg font-semibold text-foreground">영어</h3>
+          <p className="text-sm text-muted-foreground">영어는 절대평가로 등급만 입력합니다</p>
           <div className="w-32">
             <Label htmlFor="english-grade" className="text-sm mb-2 block text-muted-foreground">
-              등급
+              등급 <span className="text-destructive">*</span>
             </Label>
             <Input
               id="english-grade"
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              placeholder="2"
+              placeholder="예: 1"
               value={data.english.grade}
               onChange={(e) => updateEnglish(e.target.value.replace(/[^0-9]/g, ''))}
-              className="text-center font-mono h-12"
+              className={`text-center font-mono h-12 ${!data.english.grade ? 'border-amber-400' : ''}`}
             />
           </div>
         </div>
@@ -166,7 +240,7 @@ export default function SuneungPage() {
           <h3 className="text-lg font-semibold text-foreground">탐구 1</h3>
 
           <SubjectSelect
-            label="과목 선택"
+            label="과목 선택 *"
             value={data.tamgu1.subject}
             onChange={(value) => updateTamgu1({ subject: value as TamguSubject })}
             options={[{ value: '', label: '과목을 선택하세요' }, ...tamguSubjects]}
@@ -176,49 +250,49 @@ export default function SuneungPage() {
           <div className="flex gap-3">
             <div className="flex-1">
               <Label htmlFor="tamgu1-std" className="text-sm mb-2 block text-muted-foreground">
-                표준점수
+                표준점수 <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="tamgu1-std"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="65"
+                placeholder="예: 65"
                 value={data.tamgu1.standardScore}
                 onChange={(e) => updateTamgu1({ standardScore: e.target.value.replace(/[^0-9]/g, '') })}
-                className="text-center font-mono h-12"
+                className={`text-center font-mono h-12 ${!data.tamgu1.standardScore ? 'border-amber-400' : ''}`}
               />
             </div>
 
             <div className="flex-1">
               <Label htmlFor="tamgu1-per" className="text-sm mb-2 block text-muted-foreground">
-                백분위
+                백분위 <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="tamgu1-per"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="92"
+                placeholder="예: 92"
                 value={data.tamgu1.percentile}
                 onChange={(e) => updateTamgu1({ percentile: e.target.value.replace(/[^0-9]/g, '') })}
-                className="text-center font-mono h-12"
+                className={`text-center font-mono h-12 ${!data.tamgu1.percentile ? 'border-amber-400' : ''}`}
               />
             </div>
 
             <div className="w-20">
               <Label htmlFor="tamgu1-grade" className="text-sm mb-2 block text-muted-foreground">
-                등급
+                등급 <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="tamgu1-grade"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="2"
+                placeholder="예: 2"
                 value={data.tamgu1.grade}
                 onChange={(e) => updateTamgu1({ grade: e.target.value.replace(/[^0-9]/g, '') })}
-                className="text-center font-mono h-12"
+                className={`text-center font-mono h-12 ${!data.tamgu1.grade ? 'border-amber-400' : ''}`}
               />
             </div>
           </div>
@@ -229,7 +303,7 @@ export default function SuneungPage() {
           <h3 className="text-lg font-semibold text-foreground">탐구 2</h3>
 
           <SubjectSelect
-            label="과목 선택"
+            label="과목 선택 *"
             value={data.tamgu2.subject}
             onChange={(value) => updateTamgu2({ subject: value as TamguSubject })}
             options={[{ value: '', label: '과목을 선택하세요' }, ...tamguSubjects]}
@@ -239,49 +313,49 @@ export default function SuneungPage() {
           <div className="flex gap-3">
             <div className="flex-1">
               <Label htmlFor="tamgu2-std" className="text-sm mb-2 block text-muted-foreground">
-                표준점수
+                표준점수 <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="tamgu2-std"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="62"
+                placeholder="예: 62"
                 value={data.tamgu2.standardScore}
                 onChange={(e) => updateTamgu2({ standardScore: e.target.value.replace(/[^0-9]/g, '') })}
-                className="text-center font-mono h-12"
+                className={`text-center font-mono h-12 ${!data.tamgu2.standardScore ? 'border-amber-400' : ''}`}
               />
             </div>
 
             <div className="flex-1">
               <Label htmlFor="tamgu2-per" className="text-sm mb-2 block text-muted-foreground">
-                백분위
+                백분위 <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="tamgu2-per"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="88"
+                placeholder="예: 88"
                 value={data.tamgu2.percentile}
                 onChange={(e) => updateTamgu2({ percentile: e.target.value.replace(/[^0-9]/g, '') })}
-                className="text-center font-mono h-12"
+                className={`text-center font-mono h-12 ${!data.tamgu2.percentile ? 'border-amber-400' : ''}`}
               />
             </div>
 
             <div className="w-20">
               <Label htmlFor="tamgu2-grade" className="text-sm mb-2 block text-muted-foreground">
-                등급
+                등급 <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="tamgu2-grade"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="3"
+                placeholder="예: 3"
                 value={data.tamgu2.grade}
                 onChange={(e) => updateTamgu2({ grade: e.target.value.replace(/[^0-9]/g, '') })}
-                className="text-center font-mono h-12"
+                className={`text-center font-mono h-12 ${!data.tamgu2.grade ? 'border-amber-400' : ''}`}
               />
             </div>
           </div>
@@ -290,19 +364,20 @@ export default function SuneungPage() {
         {/* 한국사 (등급만) */}
         <div className="p-5 bg-card border border-border rounded-xl space-y-4">
           <h3 className="text-lg font-semibold text-foreground">한국사</h3>
+          <p className="text-sm text-muted-foreground">한국사는 절대평가로 등급만 입력합니다</p>
           <div className="w-32">
             <Label htmlFor="history-grade" className="text-sm mb-2 block text-muted-foreground">
-              등급
+              등급 <span className="text-destructive">*</span>
             </Label>
             <Input
               id="history-grade"
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              placeholder="3"
+              placeholder="예: 3"
               value={data.history.grade}
               onChange={(e) => updateHistory(e.target.value.replace(/[^0-9]/g, ''))}
-              className="text-center font-mono h-12"
+              className={`text-center font-mono h-12 ${!data.history.grade ? 'border-amber-400' : ''}`}
             />
           </div>
         </div>

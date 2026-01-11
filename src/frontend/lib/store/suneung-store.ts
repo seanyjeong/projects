@@ -10,6 +10,8 @@ export type SubjectScore = {
   grade: string;         // 등급
 };
 
+export type KoreanSubject = '화법과작문' | '언어와매체';
+
 export type MathSubject = '확통' | '미적' | '기하';
 
 export type TamguSubject =
@@ -30,7 +32,9 @@ export interface SuneungData {
   examType: ExamType;
 
   // 국어
-  korean: SubjectScore;
+  korean: SubjectScore & {
+    subject: KoreanSubject;
+  };
 
   // 수학
   math: SubjectScore & {
@@ -55,7 +59,7 @@ export interface SuneungData {
 interface SuneungStore {
   data: SuneungData;
   updateExamType: (type: ExamType) => void;
-  updateKorean: (score: Partial<SubjectScore>) => void;
+  updateKorean: (score: Partial<SubjectScore & { subject: KoreanSubject }>) => void;
   updateMath: (score: Partial<SubjectScore & { subject: MathSubject }>) => void;
   updateEnglish: (grade: string) => void;
   updateTamgu1: (score: Partial<TamguScore>) => void;
@@ -67,7 +71,7 @@ interface SuneungStore {
 
 const initialData: SuneungData = {
   examType: '수능',
-  korean: { standardScore: '', percentile: '', grade: '' },
+  korean: { standardScore: '', percentile: '', grade: '', subject: '화법과작문' },
   math: { standardScore: '', percentile: '', grade: '', subject: '확통' },
   english: { grade: '' },
   tamgu1: { subject: '', standardScore: '', percentile: '', grade: '' },

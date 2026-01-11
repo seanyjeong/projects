@@ -9,9 +9,22 @@ async function bootstrap() {
   // Global prefix 설정
   app.setGlobalPrefix('api');
 
-  // CORS 설정
+  // CORS 설정 (여러 도메인 허용)
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://ps-mu-ochre.vercel.app',
+    process.env.FRONTEND_URL,
+  ].filter(Boolean);
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      // 개발환경 또는 허용된 origin인 경우
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
   });
 
