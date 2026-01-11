@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export default function Home() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#667eea] via-[#764ba2] to-[#f093fb]">
@@ -42,9 +44,9 @@ export default function Home() {
               </p>
 
               {/* CTA Button */}
-              <button className="w-full h-14 bg-white text-[#667eea] text-lg font-semibold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200">
+              <Link href="/suneung" className="block w-full h-14 bg-white text-[#667eea] text-lg font-semibold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center">
                 무료로 시작하기
-              </button>
+              </Link>
 
               {/* Stats */}
               <div className="flex items-center justify-around pt-4 border-t border-white/20">
@@ -219,9 +221,9 @@ export default function Home() {
               <p className="text-lg text-white/90">
                 회원가입 없이 바로 사용 가능해요
               </p>
-              <button className="w-full h-14 bg-white text-[#667eea] text-lg font-semibold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200">
+              <Link href="/suneung" className="block w-full h-14 bg-white text-[#667eea] text-lg font-semibold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center">
                 무료로 시작하기 →
-              </button>
+              </Link>
             </div>
           </div>
 
