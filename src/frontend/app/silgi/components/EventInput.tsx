@@ -11,6 +11,7 @@
 
 import { EventRecord } from '@/lib/store/silgi-store';
 import { useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 
 interface EventInputProps {
   event: EventRecord;
@@ -20,6 +21,7 @@ interface EventInputProps {
 
 export function EventInput({ event, onChange, disabled = false }: EventInputProps) {
   const [isFocused, setIsFocused] = useState(false);
+  const hasValue = event.value.trim() !== '';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -31,16 +33,31 @@ export function EventInput({ event, onChange, disabled = false }: EventInputProp
   };
 
   return (
-    <div className="flex items-center gap-3">
+    <div className={`
+      flex items-center gap-4 p-4 rounded-xl transition-all duration-200
+      ${hasValue ? 'bg-emerald-50/50' : 'bg-gray-50'}
+      ${isFocused ? 'ring-2 ring-emerald-500 ring-offset-1' : ''}
+    `}>
+      {/* 완료 표시 */}
+      <div className={`
+        w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0
+        ${hasValue ? 'bg-emerald-500' : 'border-2 border-gray-200'}
+      `}>
+        {hasValue && <CheckCircle2 className="w-4 h-4 text-white" />}
+      </div>
+
       {/* 종목명 */}
       <label
         htmlFor={event.eventKey}
-        className="flex-1 text-sm font-medium text-text-primary"
+        className={`
+          flex-1 font-medium
+          ${hasValue ? 'text-emerald-700' : 'text-gray-700'}
+        `}
       >
         {event.eventName}
       </label>
 
-      {/* 입력 필드 */}
+      {/* 입력 필드 + 단위 */}
       <div className="flex items-center gap-2">
         <input
           id={event.eventKey}
@@ -54,27 +71,32 @@ export function EventInput({ event, onChange, disabled = false }: EventInputProp
           onBlur={() => setIsFocused(false)}
           disabled={disabled}
           className={`
-            w-24 h-10
+            w-24 h-12
             px-3
             text-center
             font-mono
-            text-base
-            bg-bg-tertiary
-            border rounded-lg
-            transition-all duration-150
+            text-lg font-semibold
+            bg-white
+            border-2 rounded-xl
+            transition-all duration-200
             focus:outline-none
             disabled:opacity-50 disabled:cursor-not-allowed
             ${
-              isFocused
-                ? 'border-border-focus bg-bg-secondary'
-                : 'border-border'
+              hasValue
+                ? 'border-emerald-300 text-emerald-700'
+                : 'border-gray-200 text-gray-900'
             }
-            ${event.value ? 'text-text-primary' : 'text-text-tertiary'}
+            ${isFocused ? 'border-emerald-500' : ''}
           `}
         />
 
         {/* 단위 */}
-        <span className="text-sm text-text-secondary w-8">{event.unit}</span>
+        <span className={`
+          text-sm font-medium w-10
+          ${hasValue ? 'text-emerald-600' : 'text-gray-400'}
+        `}>
+          {event.unit}
+        </span>
       </div>
     </div>
   );

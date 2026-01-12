@@ -5,18 +5,19 @@
  * 1. 성별 선택 (남/여) - 배점표가 다름
  * 2. 선택된 대학별 실기 종목 표시
  * 3. 각 종목별 기록 입력
- * 4. 실시간 점수 환산 표시 (가능하면)
- * 5. 결과 화면으로 이동
+ * 4. 결과 화면으로 이동
  */
 
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useSilgiStore } from '@/lib/store/silgi-store';
 import { GenderSelector } from './components/GenderSelector';
 import { UniversitySection } from './components/UniversitySection';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Calculator, Info, CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { MOCK_UNIVERSITIES } from '../university/mock-data';
 
 export default function SilgiPage() {
@@ -105,127 +106,161 @@ export default function SilgiPage() {
     router.push('/result');
   };
 
-  // 뒤로가기
-  const handleBack = () => {
-    router.back();
+  // 진행 상황 계산
+  const getTotalProgress = () => {
+    if (!data.universities.length) return { completed: 0, total: 0 };
+    const total = data.universities.reduce((sum, u) => sum + u.events.length, 0);
+    const completed = data.universities.reduce(
+      (sum, u) => sum + u.events.filter(e => e.value.trim() !== '').length,
+      0
+    );
+    return { completed, total };
   };
 
-  return (
-    <div className="min-h-screen bg-bg-primary pb-24">
-      {/* 헤더 */}
-      <div className="sticky top-0 z-10 bg-bg-primary border-b border-border">
-        <div className="p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <button
-              onClick={handleBack}
-              className="
-                w-10 h-10
-                flex items-center justify-center
-                rounded-lg
-                hover:bg-bg-tertiary
-                transition-all duration-150
-                active:scale-95
-              "
-              aria-label="뒤로가기"
-            >
-              <ChevronLeft className="w-6 h-6 text-text-secondary" strokeWidth={2} />
-            </button>
-            <h1 className="text-page-title">실기 기록 입력</h1>
-          </div>
+  const progress = getTotalProgress();
 
-          <p className="text-sm text-text-secondary">
-            각 종목의 기록을 정확히 입력해주세요
-          </p>
+  return (
+    <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
+      {/* Navigation */}
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+        <div className="max-w-3xl mx-auto px-5 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/university" className="flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">S</span>
+              </div>
+              <span className="font-semibold text-gray-900">실기 기록 입력</span>
+            </div>
+          </div>
+          <div className="text-sm text-gray-500">
+            3 / 3 단계
+          </div>
+        </div>
+      </nav>
+
+      {/* Progress Bar */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-3xl mx-auto">
+          <div className="h-1 bg-gray-100">
+            <div className="h-full w-full bg-emerald-500 transition-all duration-300"></div>
+          </div>
         </div>
       </div>
 
-      {/* 메인 컨텐츠 */}
-      <div className="p-5 space-y-6">
+      {/* Content */}
+      <main className="flex-1 max-w-3xl mx-auto w-full px-5 py-6 pb-32">
         {/* 성별 선택 */}
-        <GenderSelector value={data.gender} onChange={handleGenderChange} />
+        <div className="mb-6">
+          <GenderSelector value={data.gender} onChange={handleGenderChange} />
+        </div>
+
+        {/* 안내 메시지 - 성별 미선택 시 */}
+        {!data.gender && (
+          <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl mb-6">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-amber-800 mb-1">성별을 먼저 선택해주세요</p>
+                <p className="text-amber-600">
+                  성별에 따라 실기 배점표가 다르게 적용됩니다.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 대학별 실기 입력 섹션 */}
-        {data.gender && data.universities.length > 0 ? (
+        {data.gender && data.universities.length > 0 && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-text-primary">
-                선택된 대학 ({data.universities.length})
-              </h2>
-              <span className="text-xs text-text-tertiary">
-                동일 종목은 자동으로 적용됩니다
-              </span>
+            {/* 진행 상황 표시 */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-gray-600">입력 진행률</span>
+                <span className="text-sm font-bold text-emerald-600">
+                  {progress.completed} / {progress.total}
+                </span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
+                  style={{ width: `${progress.total > 0 ? (progress.completed / progress.total) * 100 : 0}%` }}
+                />
+              </div>
+              {progress.completed === progress.total && progress.total > 0 && (
+                <div className="flex items-center gap-2 mt-3 text-emerald-600">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="text-sm font-medium">모든 종목 입력 완료!</span>
+                </div>
+              )}
             </div>
 
-            {data.universities.map((university) => (
+            {/* 안내 */}
+            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-emerald-800 mb-1">실기 기록을 입력해주세요</p>
+                  <p className="text-emerald-600">
+                    동일한 종목은 한 번만 입력하면 모든 대학에 자동 적용됩니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 대학별 섹션 */}
+            {data.universities.map((university, index) => (
               <UniversitySection
                 key={university.universityId}
                 university={university}
+                index={index + 1}
                 onEventChange={(eventKey, value) =>
                   handleEventChange(university.universityId, eventKey, value)
                 }
               />
             ))}
           </div>
-        ) : (
-          data.gender && (
-            <div className="py-16 text-center">
-              <p className="text-text-secondary">선택된 대학이 없습니다</p>
-              <button
-                onClick={() => router.push('/university')}
-                className="mt-4 text-accent text-sm font-medium hover:underline"
-              >
-                대학 선택하러 가기
-              </button>
-            </div>
-          )
         )}
 
-        {/* 안내 메시지 */}
-        {!data.gender && (
-          <div className="p-4 bg-accent-light rounded-lg">
-            <p className="text-sm text-accent font-medium">
-              먼저 성별을 선택해주세요
-            </p>
-            <p className="text-xs text-accent mt-1">
-              성별에 따라 배점표가 달라집니다
-            </p>
+        {/* 대학 없음 */}
+        {data.gender && data.universities.length === 0 && (
+          <div className="py-16 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Calculator className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-gray-500 mb-4">선택된 대학이 없습니다</p>
+            <Link
+              href="/university"
+              className="text-emerald-600 font-medium hover:underline"
+            >
+              대학 선택하러 가기
+            </Link>
           </div>
         )}
-      </div>
+      </main>
 
       {/* 하단 고정 버튼 */}
-      {data.gender && data.universities.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 p-5 bg-bg-primary border-t border-border">
-          <button
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-100">
+        <div className="max-w-3xl mx-auto px-5 py-4 safe-bottom">
+          <Button
             onClick={handleCalculate}
             disabled={!isValid()}
-            className={`
-              w-full h-12
-              px-6
-              text-white
-              text-base font-medium
-              rounded-lg
-              transition-all duration-150
-              flex items-center justify-center gap-2
-              ${
-                isValid()
-                  ? 'bg-accent hover:bg-accent-hover active:scale-[0.98]'
-                  : 'bg-text-tertiary cursor-not-allowed opacity-60'
-              }
-            `}
+            className="w-full h-12 text-base font-semibold bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-200 disabled:text-gray-400 rounded-xl"
+            size="lg"
           >
-            계산하기
-            <ChevronRight className="w-5 h-5" strokeWidth={2} />
-          </button>
-
-          {/* 진행 상태 표시 */}
-          {!isValid() && (
-            <p className="text-xs text-text-tertiary text-center mt-2">
+            <Calculator className="w-5 h-5 mr-2" />
+            점수 계산하기
+            <ArrowRight className="ml-2 w-5 h-5" />
+          </Button>
+          {!isValid() && data.gender && (
+            <p className="text-center text-sm text-gray-500 mt-2">
               모든 종목을 입력하면 계산할 수 있습니다
             </p>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
