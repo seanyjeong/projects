@@ -7,6 +7,7 @@ import { CalculatorModule } from './calculator/calculator.module';
 import { UniversityModule } from './university/university.module';
 import { UserModule } from './user/user.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { UnivjungsiModule } from './univjungsi/univjungsi.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PrismaModule } from './prisma/prisma.module';
       envFilePath: '.env',
     }),
     PrismaModule,
+    UnivjungsiModule,
     AuthModule,
     CalculatorModule,
     UniversityModule,

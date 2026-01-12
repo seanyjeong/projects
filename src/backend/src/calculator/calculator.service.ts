@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { UnivjungsiService } from '../univjungsi/univjungsi.service';
 import {
   SuneungCalculateDto,
   SuneungCalculateResponseDto,
@@ -30,7 +30,8 @@ import {
 
 @Injectable()
 export class CalculatorService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private univjungsi: UnivjungsiService) {}
+
   /**
    * 수능 점수 계산
    */
@@ -38,23 +39,26 @@ export class CalculatorService {
     dto: SuneungCalculateDto,
   ): Promise<SuneungCalculateResponseDto> {
     try {
-      // 1. DB에서 학과 정보 조회 (현재는 Mock)
-      const formulaData = await this.getFormulaData(dto.departmentId);
+      const deptId = this.parseDeptId(dto.departmentId);
+
+      // 1. univjungsi DB에서 학과/공식 정보 조회
+      const formulaData = await this.getFormulaData(deptId);
 
       // 2. DTO → StudentScores 변환
       const studentScores = this.convertToStudentScores(dto.scores);
 
-      // 3. 최고표점 조회 (현재는 Mock)
+      // 3. 최고표점 조회
       const highestMap = await this.getHighestScoreMap(formulaData.학년도);
 
       // 4. 수능 계산 엔진 호출
       const result = calculateScore(formulaData, studentScores, highestMap);
 
       // 5. 응답 변환
+      const suneungMaxScore = (formulaData.총점 || 1000) * (formulaData.수능 / 100);
       return {
         departmentId: dto.departmentId,
         suneungScore: parseFloat(result.totalScore),
-        maxScore: formulaData.수능,
+        maxScore: suneungMaxScore, // 700 (총점 1000 * 수능비율 70%)
         details: result.breakdown as Record<string, number>,
       };
     } catch (error) {
@@ -69,10 +73,10 @@ export class CalculatorService {
     dto: PracticalCalculateDto,
   ): Promise<PracticalCalculateResponseDto> {
     try {
-      // 1. DB에서 학과 정보 조회 (현재는 Mock)
-      const practicalFormula = await this.getPracticalFormulaData(
-        dto.departmentId,
-      );
+      const deptId = this.parseDeptId(dto.departmentId);
+
+      // 1. univjungsi DB에서 실기 공식/배점표 조회
+      const practicalFormula = await this.getPracticalFormulaData(deptId);
 
       // 2. DTO → StudentPracticalData 변환
       const studentData = this.convertToStudentPracticalData(
@@ -113,11 +117,11 @@ export class CalculatorService {
     dto: TotalCalculateDto,
   ): Promise<TotalCalculateResponseDto> {
     try {
-      // 1. DB에서 학과 정보 조회
-      const formulaData = await this.getFormulaData(dto.departmentId);
-      const practicalFormula = await this.getPracticalFormulaData(
-        dto.departmentId,
-      );
+      const deptId = this.parseDeptId(dto.departmentId);
+
+      // 1. univjungsi DB에서 공식 정보 조회
+      const formulaData = await this.getFormulaData(deptId);
+      const practicalFormula = await this.getPracticalFormulaData(deptId);
 
       // 2. 수능 계산
       const studentScores = this.convertToStudentScores(dto.suneungScores);
@@ -133,36 +137,41 @@ export class CalculatorService {
         dto.gender,
         dto.silgiRecords,
       );
+
       const practicalResult = calculatePracticalScore(
         practicalFormula,
         studentPracticalData,
       );
 
-      // 4. 총점 계산
+      // 4. 점수 추출
       const suneungScore = parseFloat(suneungResult.totalScore);
       const practicalScore = parseFloat(practicalResult.totalScore);
 
-      // 수능 비율 (formulaData.수능은 배점, 예: 400. 비율로 변환: 40%)
-      const suneungRatioPercent = formulaData.수능 / 10;
-      const silgiRatioPercent = 100 - suneungRatioPercent;
+      // 5. 비율 계산 (수능 = 70%, 실기 = 30%)
+      const suneungRatioPercent = formulaData.수능; // 70
+      const silgiRatioPercent = 100 - suneungRatioPercent; // 30
+
+      // 배점 계산 (총점 1000 기준)
+      const suneungMaxScore = (formulaData.총점 || 1000) * (suneungRatioPercent / 100); // 700
+      const silgiMaxScore = practicalFormula.실기총점; // 300
 
       const totalScore = suneungScore + practicalScore;
 
       return {
         departmentId: dto.departmentId,
-        universityName: '', // compareUniversities에서 설정
-        departmentName: '', // compareUniversities에서 설정
+        universityName: '',
+        departmentName: '',
         totalScore,
-        maxScore: 1000,
+        maxScore: formulaData.총점 || 1000,
         breakdown: {
           suneung: {
             score: suneungScore,
-            max: formulaData.수능,
+            max: suneungMaxScore,
             ratio: suneungRatioPercent,
           },
           silgi: {
             score: practicalScore,
-            max: practicalFormula.실기총점,
+            max: silgiMaxScore,
             ratio: silgiRatioPercent,
           },
         },
@@ -182,11 +191,10 @@ export class CalculatorService {
       const results = [];
 
       for (const deptData of dto.departments) {
-        // DB에서 학과 정보 조회
-        const department = await this.prisma.department.findUnique({
-          where: { id: deptData.departmentId },
-          include: { university: true },
-        });
+        const deptId = this.parseDeptId(deptData.departmentId);
+
+        // univjungsi DB에서 학과 정보 조회
+        const department = await this.univjungsi.getDepartmentById(deptId);
 
         if (!department) {
           throw new NotFoundException(
@@ -197,7 +205,7 @@ export class CalculatorService {
         const totalDto: TotalCalculateDto = {
           departmentId: deptData.departmentId,
           suneungScores: dto.suneungScores,
-          silgiRecords: deptData.silgiRecords, // 해당 대학의 실기 기록만 사용
+          silgiRecords: deptData.silgiRecords,
           gender: dto.gender,
         };
 
@@ -205,8 +213,8 @@ export class CalculatorService {
 
         results.push({
           departmentId: deptData.departmentId,
-          universityName: department.university.name,
-          departmentName: department.name,
+          universityName: department.univ_name,
+          departmentName: department.dept_name,
           totalScore: totalResult.totalScore,
           suneungScore: totalResult.breakdown?.suneung?.score,
           silgiScore: totalResult.breakdown?.silgi?.score,
@@ -225,6 +233,18 @@ export class CalculatorService {
   // ============================================
   // Private Helper Methods
   // ============================================
+
+  /**
+   * departmentId 파싱 (문자열 또는 숫자 지원)
+   */
+  private parseDeptId(departmentId: string | number): number {
+    if (typeof departmentId === 'number') return departmentId;
+    const parsed = parseInt(departmentId, 10);
+    if (isNaN(parsed)) {
+      throw new Error(`유효하지 않은 학과 ID: ${departmentId}`);
+    }
+    return parsed;
+  }
 
   /**
    * DTO → StudentScores 변환
@@ -304,185 +324,120 @@ export class CalculatorService {
   }
 
   /**
-   * DB에서 FormulaData 조회
+   * univjungsi DB에서 FormulaData 조회
    */
-  private async getFormulaData(departmentId: string): Promise<FormulaData> {
-    const dept = await this.prisma.department.findUnique({
-      where: { id: departmentId },
-    });
-
-    if (!dept || !dept.formula) {
-      throw new NotFoundException(`학과 공식 데이터를 찾을 수 없습니다: ${departmentId}`);
+  private async getFormulaData(deptId: number): Promise<FormulaData> {
+    // 학과 정보 조회
+    const dept = await this.univjungsi.getDepartmentById(deptId);
+    if (!dept) {
+      throw new NotFoundException(`학과를 찾을 수 없습니다: ${deptId}`);
     }
 
-    const formula = dept.formula as any;
-    const weights = formula.suneungWeights || {};
-    const types = formula.suneungTypes || {};
+    // 계산식 설정 조회
+    const formula = await this.univjungsi.getFormulaConfig(deptId);
+    if (!formula) {
+      throw new NotFoundException(`계산식 설정을 찾을 수 없습니다: ${deptId}`);
+    }
 
-    // DB formula → FormulaData 변환
+    const subjects = formula.subjects_config || {};
+    const displayConfig = formula.display_config || {};
+
+    // formula_configs → FormulaData 변환
     return {
-      dept_id: 1,
-      학년도: dept.year,
-      총점: 1000,
-      수능: formula.suneungRatio * 10, // 비율 → 배점 (40% → 400)
-      국어: weights.korean || 0,
-      수학: weights.math || 0,
-      영어: weights.english || 0,
-      탐구: weights.tamgu || 0,
-      탐구수: 2,
-      한국사: weights.history || 0,
-      계산유형: '기본비율',
+      dept_id: deptId,
+      학년도: dept.year_id,
+      총점: formula.total_score || 1000,
+      수능: formula.suneung_ratio, // 70% (0-100 range)
+      국어: subjects.korean?.ratio || 0,
+      수학: subjects.math?.ratio || 0,
+      영어: subjects.english?.ratio || 0,
+      탐구: subjects.inquiry?.ratio || 0,
+      탐구수: subjects.inquiry?.count || 2,
+      한국사: subjects.history?.ratio || 0,
+      계산유형: formula.calculation_mode === 'legacy' ? '특수공식' : '기본비율',
+      특수공식: formula.legacy_formula,
       score_config: {
         korean_math: {
-          type: types.korean === 'standard' ? '표준점수' : '백분위',
+          type: this.getScoreType(subjects.korean?.source_type) as '표준점수' | '백분위',
           max_score_method: 'highest_of_year',
         },
         inquiry: {
-          type: types.tamgu === 'standard' ? '표준점수' : '백분위',
+          type: this.getScoreType(subjects.inquiry?.source_type) as '표준점수' | '백분위' | '변환표준점수',
           max_score_method: 'highest_of_year',
         },
       },
-      english_scores: formula.englishGrades || {
-        '1': 100, '2': 98, '3': 95, '4': 90, '5': 85,
-        '6': 80, '7': 75, '8': 70, '9': 65,
-      },
-    };
+      english_scores: formula.english_scores || {},
+      history_scores: formula.history_scores || {},
+      U_ID: formula.legacy_uid,
+    } as FormulaData;
   }
 
   /**
-   * DB에서 PracticalFormulaData 조회
+   * source_type → 점수 유형 변환
+   */
+  private getScoreType(sourceType: string | undefined): string {
+    switch (sourceType) {
+      case 'std':
+        return '표준점수';
+      case 'pct':
+        return '백분위';
+      case 'conv_std':
+        return '변환표준점수';
+      case 'grade_conv':
+        return '등급환산';
+      default:
+        return '백분위';
+    }
+  }
+
+  /**
+   * univjungsi DB에서 PracticalFormulaData 조회
    */
   private async getPracticalFormulaData(
-    departmentId: string,
+    deptId: number,
   ): Promise<PracticalFormulaData> {
-    const dept = await this.prisma.department.findUnique({
-      where: { id: departmentId },
-    });
-
-    if (!dept || !dept.formula) {
-      throw new NotFoundException(`학과 공식 데이터를 찾을 수 없습니다: ${departmentId}`);
+    // 계산식 설정 조회
+    const formula = await this.univjungsi.getFormulaConfig(deptId);
+    if (!formula) {
+      throw new NotFoundException(`계산식 설정을 찾을 수 없습니다: ${deptId}`);
     }
 
-    const formula = dept.formula as any;
-    const silgiEvents = formula.silgiEvents || [];
+    // 실기 배점표 조회 (실제 데이터!)
+    const practicalScores = await this.univjungsi.getPracticalScores(deptId);
 
-    // 실기 배점표 생성 (종목별 기본 범위 기반)
-    const 실기배점: any[] = [];
-    silgiEvents.forEach((event: any) => {
-      const eventName = event.name;
-      const maxScore = event.maxScore || 100;
+    // PracticalScoreRecord → 실기배점 형식 변환
+    const 실기배점 = practicalScores.map((score) => ({
+      종목명: score.종목명,
+      성별: score.성별,
+      기록: score.기록,
+      배점: score.점수,
+    }));
 
-      // 종목별 기본 범위 정의 (실제 데이터가 없으므로 합리적인 범위 사용)
-      const range = this.getEventDefaultRange(eventName);
+    // display_config에서 실기 설정 추출
+    const displayConfig = formula.display_config || {};
+    const 실기총점 = displayConfig.실기총점 || 0;
+    const 미달처리 = displayConfig.미달처리 || '0점';
 
-      // 10개 등급으로 배점표 생성
-      for (let i = 0; i <= 10; i++) {
-        const ratio = i / 10;
-        let record: number;
-
-        if (range.method === 'lower_is_better') {
-          // 낮을수록 좋음 (100m 등): 만점 기록 → 최저 기록
-          record = range.best + (range.worst - range.best) * ratio;
-        } else {
-          // 높을수록 좋음 (멀리뛰기 등): 만점 기록 → 최저 기록
-          record = range.best - (range.best - range.worst) * ratio;
-        }
-
-        const score = Math.round(maxScore * (1 - ratio));
-
-        실기배점.push({
-          종목명: eventName,
-          성별: '공통',
-          기록: record.toFixed(2),
-          배점: score,
-        });
-      }
-    });
-
-    // 실기 총점 계산
-    const 실기총점 = silgiEvents.reduce(
-      (sum: number, e: any) => sum + (e.maxScore || 0),
-      0,
-    );
+    // special-rules.ts에 정의된 U_ID 목록
+    const SPECIAL_UIDS = [2, 3, 13, 16, 17, 19, 69, 70, 71, 99, 121, 146, 147, 151, 152, 153, 160, 175, 184, 186, 189, 194, 197, 199];
+    const uid = formula.legacy_uid;
+    const hasSpecialRule = SPECIAL_UIDS.includes(uid);
 
     return {
-      dept_id: 1,
-      실기모드: 'basic',
+      dept_id: deptId,
+      U_ID: uid,
+      실기모드: hasSpecialRule ? 'special' : 'basic',
       실기총점,
       기본점수: 0,
-      미달처리: '최하점',
+      미달처리,
       실기배점,
     };
   }
 
   /**
-   * 종목별 기본 범위 반환 (실제 데이터 없을 때 사용)
-   */
-  private getEventDefaultRange(eventName: string): {
-    best: number;
-    worst: number;
-    method: 'lower_is_better' | 'higher_is_better';
-  } {
-    // 종목명 기반으로 기본 범위 설정
-    const lowerName = eventName.toLowerCase();
-
-    // 시간 측정 종목 (낮을수록 좋음)
-    if (lowerName.includes('100m') || lowerName.includes('100미터')) {
-      return { best: 11.0, worst: 15.0, method: 'lower_is_better' };
-    }
-    if (lowerName.includes('200m') || lowerName.includes('200미터')) {
-      return { best: 23.0, worst: 32.0, method: 'lower_is_better' };
-    }
-    if (lowerName.includes('왕복') || lowerName.includes('셔틀')) {
-      return { best: 10.0, worst: 15.0, method: 'lower_is_better' };
-    }
-    if (lowerName.includes('1500') || lowerName.includes('장거리')) {
-      return { best: 240, worst: 420, method: 'lower_is_better' }; // 초 단위
-    }
-    if (lowerName.includes('지그재그') || lowerName.includes('사이드스텝')) {
-      return { best: 8.0, worst: 15.0, method: 'lower_is_better' };
-    }
-
-    // 거리/횟수 측정 종목 (높을수록 좋음)
-    if (lowerName.includes('멀리뛰기') || lowerName.includes('제자리멀리')) {
-      return { best: 300, worst: 180, method: 'higher_is_better' }; // cm
-    }
-    if (lowerName.includes('던지기') || lowerName.includes('투척')) {
-      return { best: 50, worst: 20, method: 'higher_is_better' }; // m
-    }
-    if (lowerName.includes('윗몸') || lowerName.includes('싯업')) {
-      return { best: 70, worst: 30, method: 'higher_is_better' }; // 개
-    }
-    if (lowerName.includes('팔굽혀') || lowerName.includes('푸쉬업')) {
-      return { best: 60, worst: 20, method: 'higher_is_better' }; // 개
-    }
-    if (lowerName.includes('턱걸이') || lowerName.includes('철봉')) {
-      return { best: 20, worst: 3, method: 'higher_is_better' }; // 개
-    }
-    if (lowerName.includes('높이뛰기')) {
-      return { best: 180, worst: 120, method: 'higher_is_better' }; // cm
-    }
-    if (lowerName.includes('배근력')) {
-      return { best: 200, worst: 80, method: 'higher_is_better' }; // kg
-    }
-    if (lowerName.includes('악력')) {
-      return { best: 60, worst: 25, method: 'higher_is_better' }; // kg
-    }
-
-    // 기본값: 점수 직접 입력으로 가정 (높을수록 좋음)
-    return { best: 100, worst: 0, method: 'higher_is_better' };
-  }
-
-  /**
-   * 최고표점 조회 (Mock)
+   * univjungsi DB에서 최고표점 조회
    */
   private async getHighestScoreMap(year: number): Promise<HighestScoreMap> {
-    // TODO: DB에서 조회
-    return {
-      국어: 150,
-      수학: 145,
-      '생활과윤리': 70,
-      사회문화: 68,
-    };
+    return await this.univjungsi.getHighestScores(year, '수능');
   }
 }
