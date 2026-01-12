@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   SuneungCalculateDto,
   SuneungCalculateResponseDto,
@@ -29,6 +30,7 @@ import {
 
 @Injectable()
 export class CalculatorService {
+  constructor(private prisma: PrismaService) {}
   /**
    * 수능 점수 계산
    */
@@ -177,30 +179,40 @@ export class CalculatorService {
     try {
       const results = [];
 
-      for (const deptId of dto.departmentIds) {
+      for (const deptData of dto.departments) {
+        // DB에서 학과 정보 조회
+        const department = await this.prisma.department.findUnique({
+          where: { id: deptData.departmentId },
+          include: { university: true },
+        });
+
+        if (!department) {
+          throw new NotFoundException(
+            `학과를 찾을 수 없습니다: ${deptData.departmentId}`,
+          );
+        }
+
         const totalDto: TotalCalculateDto = {
-          departmentId: deptId,
+          departmentId: deptData.departmentId,
           suneungScores: dto.suneungScores,
-          silgiRecords: dto.silgiRecords,
+          silgiRecords: deptData.silgiRecords, // 해당 대학의 실기 기록만 사용
           gender: dto.gender,
         };
 
         const totalResult = await this.calculateTotal(totalDto);
 
         results.push({
-          departmentId: deptId,
-          universityName: totalResult.universityName,
-          departmentName: totalResult.departmentName,
+          departmentId: deptData.departmentId,
+          universityName: department.university.name,
+          departmentName: department.name,
           totalScore: totalResult.totalScore,
-          rank: 0, // 나중에 정렬 후 설정
+          suneungScore: totalResult.breakdown?.suneung?.score,
+          silgiScore: totalResult.breakdown?.silgi?.score,
+          maxScore: totalResult.maxScore,
+          suneungRatio: totalResult.breakdown?.suneung?.ratio,
+          silgiRatio: totalResult.breakdown?.silgi?.ratio,
         });
       }
-
-      // 점수 내림차순 정렬 및 순위 부여
-      results.sort((a, b) => b.totalScore - a.totalScore);
-      results.forEach((result, index) => {
-        result.rank = index + 1;
-      });
 
       return { results };
     } catch (error) {

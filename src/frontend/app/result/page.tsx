@@ -71,10 +71,7 @@ export default function ResultPage() {
       setError(null);
 
       try {
-        // Department IDs 추출
-        const departmentIds = selectedUniversities.map((u) => u.id);
-
-        if (departmentIds.length === 0) {
+        if (silgiData.universities.length === 0) {
           throw new Error('선택된 대학이 없습니다.');
         }
 
@@ -115,26 +112,21 @@ export default function ResultPage() {
           },
         };
 
-        // 실기 기록 변환
-        const silgiRecordsMap = new Map<string, number>();
-        silgiData.universities.forEach((univ) => {
-          univ.events.forEach((event) => {
-            if (event.value) {
-              silgiRecordsMap.set(event.eventName, parseFloat(event.value));
-            }
-          });
-        });
-
-        const silgiRecords = Array.from(silgiRecordsMap.entries()).map(([eventName, record]) => ({
-          eventName,
-          record,
+        // 대학별 실기 기록 변환
+        const departments = silgiData.universities.map((univ) => ({
+          departmentId: univ.universityId,
+          silgiRecords: univ.events
+            .filter((event) => event.value.trim() !== '')
+            .map((event) => ({
+              eventName: event.eventName,
+              record: parseFloat(event.value) || 0,
+            })),
         }));
 
         // API 호출
         const response = await api.post<{ results: CalculationResult[] }>('/calculate/compare', {
-          departmentIds,
+          departments,
           suneungScores,
-          silgiRecords,
           gender: silgiData.gender,
         });
 

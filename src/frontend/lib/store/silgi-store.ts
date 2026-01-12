@@ -91,12 +91,14 @@ export const useSilgiStore = create<SilgiStore>()(
 
       updateEventRecord: (universityId, eventKey, value) =>
         set((state) => {
-          // 동일한 종목(eventKey)을 가진 모든 대학에 같은 값 적용
+          // 해당 대학의 해당 종목만 업데이트 (대학별로 독립적)
           const updatedUniversities = state.data.universities.map((univ) => {
+            if (univ.universityId !== universityId) {
+              return univ;
+            }
             return {
               ...univ,
               events: univ.events.map((event) => {
-                // 해당 종목이 존재하고, eventKey가 일치하면 값 업데이트
                 if (event.eventKey === eventKey) {
                   return { ...event, value };
                 }

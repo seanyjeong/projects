@@ -90,26 +90,34 @@ class PracticalRecordDto {
   record: number;
 }
 
-/** 대학 비교 계산 요청 */
-export class CompareCalculateDto {
-  @ApiProperty({
-    example: ['dept-1', 'dept-2', 'dept-3'],
-    description: '비교할 학과 ID 목록',
-  })
-  @IsArray()
-  @IsString({ each: true })
-  departmentIds: string[];
-
-  @ApiProperty({ type: SuneungScoresDto })
-  @ValidateNested()
-  @Type(() => SuneungScoresDto)
-  suneungScores: SuneungScoresDto;
+/** 대학별 실기 기록 */
+class DepartmentSilgiDto {
+  @ApiProperty({ example: 'dept-1' })
+  @IsString()
+  departmentId: string;
 
   @ApiProperty({ type: [PracticalRecordDto] })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PracticalRecordDto)
   silgiRecords: PracticalRecordDto[];
+}
+
+/** 대학 비교 계산 요청 */
+export class CompareCalculateDto {
+  @ApiProperty({
+    type: [DepartmentSilgiDto],
+    description: '대학별 실기 기록 (각 대학마다 독립적인 실기 기록)',
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DepartmentSilgiDto)
+  departments: DepartmentSilgiDto[];
+
+  @ApiProperty({ type: SuneungScoresDto })
+  @ValidateNested()
+  @Type(() => SuneungScoresDto)
+  suneungScores: SuneungScoresDto;
 
   @ApiProperty({ example: 'male', enum: ['male', 'female'] })
   @IsEnum(['male', 'female'])
@@ -130,8 +138,20 @@ class CompareResultItemDto {
   @ApiProperty({ example: 965.5 })
   totalScore: number;
 
-  @ApiProperty({ example: 1 })
-  rank: number;
+  @ApiProperty({ example: 400, required: false })
+  suneungScore?: number;
+
+  @ApiProperty({ example: 565.5, required: false })
+  silgiScore?: number;
+
+  @ApiProperty({ example: 1000, required: false })
+  maxScore?: number;
+
+  @ApiProperty({ example: 40, required: false })
+  suneungRatio?: number;
+
+  @ApiProperty({ example: 60, required: false })
+  silgiRatio?: number;
 }
 
 /** 대학 비교 계산 응답 */

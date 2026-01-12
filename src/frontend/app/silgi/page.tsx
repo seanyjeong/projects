@@ -204,7 +204,7 @@ export default function SilgiPage() {
                 <div className="text-sm">
                   <p className="font-medium text-emerald-800 mb-1">실기 기록을 입력해주세요</p>
                   <p className="text-emerald-600">
-                    동일한 종목은 한 번만 입력하면 모든 대학에 자동 적용됩니다.
+                    대학마다 실기 종목과 배점이 다르므로 각 대학별로 입력해주세요.
                   </p>
                 </div>
               </div>
