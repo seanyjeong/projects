@@ -47,49 +47,52 @@
 }
 
 :root {
-  /* Design System - Light Mode */
+  /* Design System - Project S "Growth" Theme */
   --radius: 0.5rem;
 
-  /* Colors */
-  --bg-primary: #fafafa;
+  /* Colors - Emerald Green System */
+  --bg-primary: #F9FAFB;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #f5f5f5;
+  --bg-tertiary: #F3F4F6;
 
-  --text-primary: #0a0a0a;
-  --text-secondary: #525252;
-  --text-tertiary: #a3a3a3;
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-tertiary: #9CA3AF;
 
-  --border: #e5e5e5;
-  --border-focus: #0a0a0a;
+  --border: #E5E7EB;
+  --border-focus: #10B981;
 
-  --accent: #2563eb;
-  --accent-light: #dbeafe;
+  /* Brand Colors */
+  --accent: #10B981;
+  --accent-hover: #059669;
+  --accent-light: #D1FAE5;
+  --accent-dark: #065F46;
 
-  --success: #16a34a;
-  --warning: #ea580c;
-  --error: #dc2626;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
 
-  --gold: #fbbf24;
-  --silver: #94a3b8;
-  --bronze: #f97316;
+  --gold: #F59E0B;
+  --silver: #6B7280;
+  --bronze: #D97706;
 
   /* Shadcn Compatibility */
-  --background: #fafafa;
-  --foreground: #0a0a0a;
+  --background: #F9FAFB;
+  --foreground: #111827;
   --card: #ffffff;
-  --card-foreground: #0a0a0a;
+  --card-foreground: #111827;
   --popover: #ffffff;
-  --popover-foreground: #0a0a0a;
-  --primary: #2563eb;
+  --popover-foreground: #111827;
+  --primary: #10B981;
   --primary-foreground: #ffffff;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #0a0a0a;
-  --muted: #f5f5f5;
-  --muted-foreground: #525252;
-  --accent-foreground: #0a0a0a;
-  --destructive: #dc2626;
-  --input: #e5e5e5;
-  --ring: #2563eb;
+  --secondary: #F3F4F6;
+  --secondary-foreground: #111827;
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
+  --accent-foreground: #065F46;
+  --destructive: #EF4444;
+  --input: #E5E7EB;
+  --ring: #10B981;
 
   /* Spacing */
   --space-1: 4px;
@@ -125,46 +128,48 @@
 }
 
 .dark {
-  /* Design System - Dark Mode */
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #171717;
-  --bg-tertiary: #262626;
+  /* Design System - Dark Mode (Emerald) */
+  --bg-primary: #111827;
+  --bg-secondary: #1F2937;
+  --bg-tertiary: #374151;
 
-  --text-primary: #fafafa;
-  --text-secondary: #a3a3a3;
-  --text-tertiary: #525252;
+  --text-primary: #F9FAFB;
+  --text-secondary: #D1D5DB;
+  --text-tertiary: #9CA3AF;
 
-  --border: #262626;
-  --border-focus: #fafafa;
+  --border: #374151;
+  --border-focus: #34D399;
 
-  --accent: #3b82f6;
-  --accent-light: #1e3a8a;
+  --accent: #34D399;
+  --accent-hover: #10B981;
+  --accent-light: #065F46;
+  --accent-dark: #6EE7B7;
 
-  --success: #22c55e;
-  --warning: #f97316;
-  --error: #ef4444;
+  --success: #34D399;
+  --warning: #FBBF24;
+  --error: #F87171;
 
-  --gold: #fcd34d;
-  --silver: #cbd5e1;
-  --bronze: #fb923c;
+  --gold: #FBBF24;
+  --silver: #9CA3AF;
+  --bronze: #F59E0B;
 
   /* Shadcn Compatibility */
-  --background: #0a0a0a;
-  --foreground: #fafafa;
-  --card: #171717;
-  --card-foreground: #fafafa;
-  --popover: #171717;
-  --popover-foreground: #fafafa;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --secondary: #262626;
-  --secondary-foreground: #fafafa;
-  --muted: #262626;
-  --muted-foreground: #a3a3a3;
-  --accent-foreground: #fafafa;
-  --destructive: #ef4444;
-  --input: #262626;
-  --ring: #3b82f6;
+  --background: #111827;
+  --foreground: #F9FAFB;
+  --card: #1F2937;
+  --card-foreground: #F9FAFB;
+  --popover: #1F2937;
+  --popover-foreground: #F9FAFB;
+  --primary: #34D399;
+  --primary-foreground: #111827;
+  --secondary: #374151;
+  --secondary-foreground: #F9FAFB;
+  --muted: #374151;
+  --muted-foreground: #9CA3AF;
+  --accent-foreground: #D1FAE5;
+  --destructive: #F87171;
+  --input: #374151;
+  --ring: #34D399;
 }
 
 @layer base {
