@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,6 +24,12 @@ export default function RootLayout({
       <body className="antialiased">
         <ThemeProvider defaultTheme="light" storageKey="project-s-theme">
           {children}
+          <Toaster
+            position="top-center"
+            richColors
+            closeButton
+            duration={4000}
+          />
         </ThemeProvider>
       </body>
     </html>

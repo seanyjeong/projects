@@ -6,6 +6,30 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
+// 에러 타입 정의
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number,
+    public errorType: string,
+    public details?: unknown
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+// 에러 타입별 사용자 친화적 메시지
+const ERROR_MESSAGES: Record<number, string> = {
+  400: '입력 정보를 확인해주세요.',
+  401: '로그인이 필요합니다.',
+  403: '접근 권한이 없습니다.',
+  404: '요청한 정보를 찾을 수 없습니다.',
+  500: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+  502: '서버에 연결할 수 없습니다.',
+  503: '서비스가 일시적으로 중단되었습니다.',
+};
+
 class ApiClient {
   private baseUrl: string;
 
@@ -31,14 +55,45 @@ class ApiClient {
       const response = await fetch(url, config);
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-        throw new Error(error.message || `HTTP ${response.status}`);
+        const errorData = await response.json().catch(() => ({
+          message: ERROR_MESSAGES[response.status] || '알 수 없는 오류가 발생했습니다.',
+          error: 'Unknown Error',
+        }));
+
+        // 백엔드의 상세 메시지 또는 기본 메시지 사용
+        const userMessage = errorData.message || ERROR_MESSAGES[response.status] || '오류가 발생했습니다.';
+
+        throw new ApiError(
+          userMessage,
+          response.status,
+          errorData.error || 'Unknown Error',
+          errorData.details
+        );
       }
 
       return response.json();
     } catch (error) {
+      // ApiError는 그대로 전파
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      // 네트워크 에러 처리
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new ApiError(
+          '서버에 연결할 수 없습니다. 네트워크 상태를 확인해주세요.',
+          0,
+          'NetworkError'
+        );
+      }
+
+      // 기타 에러
       console.error('API request failed:', error);
-      throw error;
+      throw new ApiError(
+        '알 수 없는 오류가 발생했습니다.',
+        500,
+        'UnknownError'
+      );
     }
   }
 

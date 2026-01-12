@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  HttpException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { UnivjungsiService } from '../univjungsi/univjungsi.service';
 import {
   SuneungCalculateDto,
@@ -62,7 +68,13 @@ export class CalculatorService {
         details: result.breakdown as Record<string, number>,
       };
     } catch (error) {
-      throw new Error(`수능 계산 실패: ${error.message}`);
+      // HttpException은 그대로 전파
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        `수능 계산 중 오류가 발생했습니다: ${error.message}`,
+      );
     }
   }
 
@@ -106,7 +118,12 @@ export class CalculatorService {
         details,
       };
     } catch (error) {
-      throw new Error(`실기 계산 실패: ${error.message}`);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        `실기 계산 중 오류가 발생했습니다: ${error.message}`,
+      );
     }
   }
 
@@ -177,7 +194,12 @@ export class CalculatorService {
         },
       };
     } catch (error) {
-      throw new Error(`총점 계산 실패: ${error.message}`);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        `총점 계산 중 오류가 발생했습니다: ${error.message}`,
+      );
     }
   }
 
@@ -226,7 +248,12 @@ export class CalculatorService {
 
       return { results };
     } catch (error) {
-      throw new Error(`대학 비교 계산 실패: ${error.message}`);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        `대학 비교 계산 중 오류가 발생했습니다: ${error.message}`,
+      );
     }
   }
 
@@ -241,7 +268,7 @@ export class CalculatorService {
     if (typeof departmentId === 'number') return departmentId;
     const parsed = parseInt(departmentId, 10);
     if (isNaN(parsed)) {
-      throw new Error(`유효하지 않은 학과 ID: ${departmentId}`);
+      throw new BadRequestException(`유효하지 않은 학과 ID: ${departmentId}`);
     }
     return parsed;
   }

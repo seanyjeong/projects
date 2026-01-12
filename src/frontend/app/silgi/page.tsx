@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { useSilgiStore } from '@/lib/store/silgi-store';
 import { GenderSelector } from './components/GenderSelector';
 import { UniversitySection } from './components/UniversitySection';
@@ -56,7 +57,9 @@ export default function SilgiPage() {
   // 계산하기 버튼
   const handleCalculate = () => {
     if (!isValid()) {
-      alert('모든 항목을 입력해주세요.');
+      toast.warning('입력 필요', {
+        description: '모든 실기 종목의 기록을 입력해주세요.',
+      });
       return;
     }
 

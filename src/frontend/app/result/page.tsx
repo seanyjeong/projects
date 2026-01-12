@@ -11,10 +11,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { useSilgiStore } from '@/lib/store/silgi-store';
 import { useSuneungStore } from '@/lib/store/suneung-store';
 import { useUniversityStore } from '@/lib/store/university-store';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import {
   ArrowLeft,
   Loader2,
@@ -131,9 +132,25 @@ export default function ResultPage() {
         });
 
         setResults(response.results);
-      } catch (err: any) {
+      } catch (err) {
         console.error('Failed to calculate scores:', err);
-        setError(err.message || '점수 계산에 실패했습니다.');
+
+        let errorMessage = '점수 계산에 실패했습니다.';
+
+        if (err instanceof ApiError) {
+          errorMessage = err.message;
+          // 상태 코드별 추가 처리
+          if (err.statusCode === 404) {
+            errorMessage = '학과 정보를 찾을 수 없습니다. 대학을 다시 선택해주세요.';
+          }
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+
+        setError(errorMessage);
+        toast.error('계산 실패', {
+          description: errorMessage,
+        });
       } finally {
         setLoading(false);
       }

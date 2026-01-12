@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { ArrowRight, ArrowLeft, Info, BookOpen, Calculator, FlaskConical, Globe, History } from 'lucide-react';
 
 // 국어 선택과목 옵션
@@ -121,7 +122,9 @@ export default function SuneungPage() {
 
   const handleNext = () => {
     if (!isValid()) {
-      alert('모든 필드를 입력해주세요.');
+      toast.warning('입력 필요', {
+        description: '모든 수능 점수를 입력해주세요.',
+      });
       return;
     }
     router.push('/university');
