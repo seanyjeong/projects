@@ -141,27 +141,29 @@ export class CalculatorService {
       // 4. 총점 계산
       const suneungScore = parseFloat(suneungResult.totalScore);
       const practicalScore = parseFloat(practicalResult.totalScore);
-      const suneungRatio = formulaData.수능 / 100; // 비율 (예: 40 → 0.4)
-      const practicalRatio = (100 - formulaData.수능) / 100;
+
+      // 수능 비율 (formulaData.수능은 배점, 예: 400. 비율로 변환: 40%)
+      const suneungRatioPercent = formulaData.수능 / 10;
+      const silgiRatioPercent = 100 - suneungRatioPercent;
 
       const totalScore = suneungScore + practicalScore;
 
       return {
         departmentId: dto.departmentId,
-        universityName: '서울대학교', // TODO: DB에서 조회
-        departmentName: '체육교육과', // TODO: DB에서 조회
+        universityName: '', // compareUniversities에서 설정
+        departmentName: '', // compareUniversities에서 설정
         totalScore,
         maxScore: 1000,
         breakdown: {
           suneung: {
             score: suneungScore,
             max: formulaData.수능,
-            ratio: formulaData.수능,
+            ratio: suneungRatioPercent,
           },
           silgi: {
             score: practicalScore,
             max: practicalFormula.실기총점,
-            ratio: 100 - formulaData.수능,
+            ratio: silgiRatioPercent,
           },
         },
       };
@@ -302,76 +304,173 @@ export class CalculatorService {
   }
 
   /**
-   * DB에서 FormulaData 조회 (Mock)
+   * DB에서 FormulaData 조회
    */
   private async getFormulaData(departmentId: string): Promise<FormulaData> {
-    // TODO: Prisma로 DB 조회
-    // const dept = await this.prisma.department.findUnique({
-    //   where: { id: departmentId },
-    //   include: { university: true },
-    // });
+    const dept = await this.prisma.department.findUnique({
+      where: { id: departmentId },
+    });
 
-    // Mock 데이터 (서울대 체육교육과 예시)
+    if (!dept || !dept.formula) {
+      throw new NotFoundException(`학과 공식 데이터를 찾을 수 없습니다: ${departmentId}`);
+    }
+
+    const formula = dept.formula as any;
+    const weights = formula.suneungWeights || {};
+    const types = formula.suneungTypes || {};
+
+    // DB formula → FormulaData 변환
     return {
       dept_id: 1,
-      학년도: 2027,
+      학년도: dept.year,
       총점: 1000,
-      수능: 400, // 수능 배점 (40%)
-      국어: 30,
-      수학: 20,
-      영어: 0, // 등급별 환산
-      탐구: 50,
+      수능: formula.suneungRatio * 10, // 비율 → 배점 (40% → 400)
+      국어: weights.korean || 0,
+      수학: weights.math || 0,
+      영어: weights.english || 0,
+      탐구: weights.tamgu || 0,
       탐구수: 2,
-      한국사: 0,
+      한국사: weights.history || 0,
       계산유형: '기본비율',
       score_config: {
         korean_math: {
-          type: '표준점수',
+          type: types.korean === 'standard' ? '표준점수' : '백분위',
           max_score_method: 'highest_of_year',
         },
         inquiry: {
-          type: '변환표준점수',
+          type: types.tamgu === 'standard' ? '표준점수' : '백분위',
           max_score_method: 'highest_of_year',
         },
       },
-      english_scores: {
-        '1': 100,
-        '2': 98,
-        '3': 95,
-        '4': 90,
-        '5': 85,
-        '6': 80,
-        '7': 75,
-        '8': 70,
-        '9': 65,
+      english_scores: formula.englishGrades || {
+        '1': 100, '2': 98, '3': 95, '4': 90, '5': 85,
+        '6': 80, '7': 75, '8': 70, '9': 65,
       },
     };
   }
 
   /**
-   * DB에서 PracticalFormulaData 조회 (Mock)
+   * DB에서 PracticalFormulaData 조회
    */
   private async getPracticalFormulaData(
     departmentId: string,
   ): Promise<PracticalFormulaData> {
-    // TODO: Prisma로 DB 조회
+    const dept = await this.prisma.department.findUnique({
+      where: { id: departmentId },
+    });
 
-    // Mock 데이터 (서울대 체육교육과 예시)
+    if (!dept || !dept.formula) {
+      throw new NotFoundException(`학과 공식 데이터를 찾을 수 없습니다: ${departmentId}`);
+    }
+
+    const formula = dept.formula as any;
+    const silgiEvents = formula.silgiEvents || [];
+
+    // 실기 배점표 생성 (종목별 기본 범위 기반)
+    const 실기배점: any[] = [];
+    silgiEvents.forEach((event: any) => {
+      const eventName = event.name;
+      const maxScore = event.maxScore || 100;
+
+      // 종목별 기본 범위 정의 (실제 데이터가 없으므로 합리적인 범위 사용)
+      const range = this.getEventDefaultRange(eventName);
+
+      // 10개 등급으로 배점표 생성
+      for (let i = 0; i <= 10; i++) {
+        const ratio = i / 10;
+        let record: number;
+
+        if (range.method === 'lower_is_better') {
+          // 낮을수록 좋음 (100m 등): 만점 기록 → 최저 기록
+          record = range.best + (range.worst - range.best) * ratio;
+        } else {
+          // 높을수록 좋음 (멀리뛰기 등): 만점 기록 → 최저 기록
+          record = range.best - (range.best - range.worst) * ratio;
+        }
+
+        const score = Math.round(maxScore * (1 - ratio));
+
+        실기배점.push({
+          종목명: eventName,
+          성별: '공통',
+          기록: record.toFixed(2),
+          배점: score,
+        });
+      }
+    });
+
+    // 실기 총점 계산
+    const 실기총점 = silgiEvents.reduce(
+      (sum: number, e: any) => sum + (e.maxScore || 0),
+      0,
+    );
+
     return {
       dept_id: 1,
       실기모드: 'basic',
-      실기총점: 600,
+      실기총점,
       기본점수: 0,
-      미달처리: '0점',
-      실기배점: [
-        { 종목명: '100m', 성별: '남', 기록: '11.0', 배점: 100 },
-        { 종목명: '100m', 성별: '남', 기록: '11.5', 배점: 95 },
-        { 종목명: '100m', 성별: '남', 기록: '12.0', 배점: 90 },
-        { 종목명: '제자리멀리뛰기', 성별: '남', 기록: '290', 배점: 100 },
-        { 종목명: '제자리멀리뛰기', 성별: '남', 기록: '285', 배점: 95 },
-        { 종목명: '제자리멀리뛰기', 성별: '남', 기록: '280', 배점: 90 },
-      ],
+      미달처리: '최하점',
+      실기배점,
     };
+  }
+
+  /**
+   * 종목별 기본 범위 반환 (실제 데이터 없을 때 사용)
+   */
+  private getEventDefaultRange(eventName: string): {
+    best: number;
+    worst: number;
+    method: 'lower_is_better' | 'higher_is_better';
+  } {
+    // 종목명 기반으로 기본 범위 설정
+    const lowerName = eventName.toLowerCase();
+
+    // 시간 측정 종목 (낮을수록 좋음)
+    if (lowerName.includes('100m') || lowerName.includes('100미터')) {
+      return { best: 11.0, worst: 15.0, method: 'lower_is_better' };
+    }
+    if (lowerName.includes('200m') || lowerName.includes('200미터')) {
+      return { best: 23.0, worst: 32.0, method: 'lower_is_better' };
+    }
+    if (lowerName.includes('왕복') || lowerName.includes('셔틀')) {
+      return { best: 10.0, worst: 15.0, method: 'lower_is_better' };
+    }
+    if (lowerName.includes('1500') || lowerName.includes('장거리')) {
+      return { best: 240, worst: 420, method: 'lower_is_better' }; // 초 단위
+    }
+    if (lowerName.includes('지그재그') || lowerName.includes('사이드스텝')) {
+      return { best: 8.0, worst: 15.0, method: 'lower_is_better' };
+    }
+
+    // 거리/횟수 측정 종목 (높을수록 좋음)
+    if (lowerName.includes('멀리뛰기') || lowerName.includes('제자리멀리')) {
+      return { best: 300, worst: 180, method: 'higher_is_better' }; // cm
+    }
+    if (lowerName.includes('던지기') || lowerName.includes('투척')) {
+      return { best: 50, worst: 20, method: 'higher_is_better' }; // m
+    }
+    if (lowerName.includes('윗몸') || lowerName.includes('싯업')) {
+      return { best: 70, worst: 30, method: 'higher_is_better' }; // 개
+    }
+    if (lowerName.includes('팔굽혀') || lowerName.includes('푸쉬업')) {
+      return { best: 60, worst: 20, method: 'higher_is_better' }; // 개
+    }
+    if (lowerName.includes('턱걸이') || lowerName.includes('철봉')) {
+      return { best: 20, worst: 3, method: 'higher_is_better' }; // 개
+    }
+    if (lowerName.includes('높이뛰기')) {
+      return { best: 180, worst: 120, method: 'higher_is_better' }; // cm
+    }
+    if (lowerName.includes('배근력')) {
+      return { best: 200, worst: 80, method: 'higher_is_better' }; // kg
+    }
+    if (lowerName.includes('악력')) {
+      return { best: 60, worst: 25, method: 'higher_is_better' }; // kg
+    }
+
+    // 기본값: 점수 직접 입력으로 가정 (높을수록 좋음)
+    return { best: 100, worst: 0, method: 'higher_is_better' };
   }
 
   /**
