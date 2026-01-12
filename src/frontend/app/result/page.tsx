@@ -2,9 +2,8 @@
  * 결과 페이지
  *
  * 기능:
- * - 대학별 환산 점수 표시
- * - 순위 비교
- * - 상세 점수 breakdown
+ * - 사용자가 선택한 대학별 환산 점수 표시
+ * - 수능/실기 점수 breakdown
  */
 
 'use client';
@@ -18,9 +17,6 @@ import { useUniversityStore } from '@/lib/store/university-store';
 import { api } from '@/lib/api';
 import {
   ArrowLeft,
-  Trophy,
-  Medal,
-  Award,
   Loader2,
   AlertTriangle,
   Home,
@@ -29,7 +25,7 @@ import {
   ChevronUp,
   BookOpen,
   Dumbbell,
-  Share2,
+  School,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -40,12 +36,22 @@ interface CalculationResult {
   totalScore: number;
   suneungScore?: number;
   silgiScore?: number;
-  rank: number;
+  maxScore?: number;
+  suneungRatio?: number;
+  silgiRatio?: number;
 }
 
-const RANK_ICONS = [Trophy, Medal, Award];
-const RANK_COLORS = ['text-yellow-500', 'text-gray-400', 'text-amber-600'];
-const RANK_BG = ['bg-yellow-50 border-yellow-200', 'bg-gray-50 border-gray-200', 'bg-amber-50 border-amber-200'];
+const GROUP_LABELS: Record<string, string> = {
+  ga: '가군',
+  na: '나군',
+  da: '다군',
+};
+
+const GROUP_COLORS: Record<string, string> = {
+  ga: 'bg-blue-50 text-blue-600 border-blue-200',
+  na: 'bg-purple-50 text-purple-600 border-purple-200',
+  da: 'bg-orange-50 text-orange-600 border-orange-200',
+};
 
 export default function ResultPage() {
   const router = useRouter();
@@ -109,7 +115,7 @@ export default function ResultPage() {
           },
         };
 
-        // 실기 기록 변환 (모든 대학의 실기 종목 수집)
+        // 실기 기록 변환
         const silgiRecordsMap = new Map<string, number>();
         silgiData.universities.forEach((univ) => {
           univ.events.forEach((event) => {
@@ -144,23 +150,10 @@ export default function ResultPage() {
     calculateScores();
   }, [silgiData, suneungData, selectedUniversities]);
 
-  // 공유하기
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: '체점 - 점수 계산 결과',
-          text: `나의 체대 입시 점수 계산 결과를 확인해보세요!`,
-          url: window.location.href,
-        });
-      } catch (err) {
-        console.log('Share cancelled');
-      }
-    } else {
-      // Fallback: 클립보드에 복사
-      navigator.clipboard.writeText(window.location.href);
-      alert('링크가 복사되었습니다!');
-    }
+  // 선택한 대학의 군 정보 가져오기
+  const getUniversityGroup = (departmentId: string) => {
+    const univ = selectedUniversities.find(u => u.id === departmentId);
+    return univ?.group || 'ga';
   };
 
   return (
@@ -179,15 +172,9 @@ export default function ResultPage() {
               <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">S</span>
               </div>
-              <span className="font-semibold text-gray-900">계산 결과</span>
+              <span className="font-semibold text-gray-900">내 점수 확인</span>
             </div>
           </div>
-          <button
-            onClick={handleShare}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <Share2 className="w-5 h-5 text-gray-500" />
-          </button>
         </div>
       </nav>
 
@@ -216,101 +203,101 @@ export default function ResultPage() {
           </div>
         ) : (
           <>
-            {/* 결과 요약 헤더 */}
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 mb-6 text-white">
-              <div className="flex items-center gap-2 mb-4">
-                <Trophy className="w-6 h-6" />
-                <h2 className="text-lg font-bold">나의 점수 분석 결과</h2>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/20 rounded-xl p-4">
-                  <p className="text-emerald-100 text-sm mb-1">비교 대학</p>
-                  <p className="text-2xl font-bold">{results.length}개</p>
-                </div>
-                <div className="bg-white/20 rounded-xl p-4">
-                  <p className="text-emerald-100 text-sm mb-1">최고 점수</p>
-                  <p className="text-2xl font-bold">
-                    {results.length > 0 ? results[0].totalScore.toFixed(1) : '-'}
-                  </p>
-                </div>
-              </div>
+            {/* 안내 */}
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                내 환산 점수
+              </h1>
+              <p className="text-gray-500">
+                선택한 대학별로 계산된 환산 점수입니다.
+              </p>
             </div>
 
-            {/* 순위별 결과 카드 */}
+            {/* 대학별 점수 카드 */}
             <div className="space-y-4 mb-6">
-              <h3 className="text-lg font-bold text-gray-900">대학별 환산 점수</h3>
-
-              {results.map((result, index) => {
-                const RankIcon = RANK_ICONS[index] || Award;
-                const rankColor = RANK_COLORS[index] || 'text-gray-400';
-                const rankBg = RANK_BG[index] || 'bg-gray-50 border-gray-200';
+              {results.map((result) => {
+                const group = getUniversityGroup(result.departmentId);
+                const groupColor = GROUP_COLORS[group] || GROUP_COLORS.ga;
 
                 return (
                   <div
                     key={result.departmentId}
-                    className={`bg-white border-2 rounded-2xl overflow-hidden ${
-                      index === 0 ? 'border-emerald-200' : 'border-gray-100'
-                    }`}
+                    className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm"
                   >
-                    {/* 순위 헤더 */}
-                    <div className={`px-5 py-3 flex items-center gap-3 ${index === 0 ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${rankBg} border-2`}>
-                        <RankIcon className={`w-4 h-4 ${rankColor}`} />
+                    {/* 대학 헤더 */}
+                    <div className="px-5 py-4 border-b border-gray-100">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                            <School className="w-6 h-6 text-gray-500" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-bold text-gray-900">{result.universityName}</h3>
+                              <span className={`px-2 py-0.5 rounded-md text-xs font-semibold border ${groupColor}`}>
+                                {GROUP_LABELS[group]}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-500">{result.departmentName}</p>
+                          </div>
+                        </div>
                       </div>
-                      <span className={`font-bold ${index === 0 ? 'text-emerald-700' : 'text-gray-700'}`}>
-                        {index + 1}위
-                      </span>
-                      {index === 0 && (
-                        <span className="px-2 py-0.5 bg-emerald-500 text-white text-xs font-semibold rounded-full">
-                          최고 점수
-                        </span>
-                      )}
                     </div>
 
-                    {/* 대학 정보 + 점수 */}
+                    {/* 점수 표시 */}
                     <div className="p-5">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h4 className="text-lg font-bold text-gray-900 mb-1">
-                            {result.universityName}
-                          </h4>
-                          <p className="text-gray-500">{result.departmentName}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-3xl font-bold text-emerald-600">
-                            {result.totalScore.toFixed(2)}
+                      {/* 총점 */}
+                      <div className="text-center mb-6">
+                        <p className="text-sm text-gray-500 mb-1">환산 총점</p>
+                        <p className="text-4xl font-bold text-emerald-600">
+                          {result.totalScore.toFixed(2)}
+                        </p>
+                        {result.maxScore && (
+                          <p className="text-sm text-gray-400 mt-1">
+                            / {result.maxScore} 만점
                           </p>
-                          <p className="text-xs text-gray-400">환산 총점</p>
-                        </div>
+                        )}
                       </div>
 
-                      {/* 점수 breakdown (있는 경우) */}
-                      {(result.suneungScore || result.silgiScore) && (
-                        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-100">
-                          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
-                            <BookOpen className="w-5 h-5 text-blue-500" />
-                            <div>
-                              <p className="text-xs text-blue-600">수능</p>
-                              <p className="font-bold text-blue-700">
-                                {result.suneungScore?.toFixed(2) || '-'}
-                              </p>
-                            </div>
+                      {/* 수능/실기 breakdown */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-4 bg-blue-50 rounded-xl">
+                          <div className="flex items-center gap-2 mb-2">
+                            <BookOpen className="w-4 h-4 text-blue-500" />
+                            <span className="text-sm font-medium text-blue-700">수능</span>
+                            {result.suneungRatio && (
+                              <span className="text-xs text-blue-500">({result.suneungRatio}%)</span>
+                            )}
                           </div>
-                          <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-xl">
-                            <Dumbbell className="w-5 h-5 text-orange-500" />
-                            <div>
-                              <p className="text-xs text-orange-600">실기</p>
-                              <p className="font-bold text-orange-700">
-                                {result.silgiScore?.toFixed(2) || '-'}
-                              </p>
-                            </div>
-                          </div>
+                          <p className="text-2xl font-bold text-blue-700">
+                            {result.suneungScore?.toFixed(2) || '-'}
+                          </p>
                         </div>
-                      )}
+
+                        <div className="p-4 bg-orange-50 rounded-xl">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Dumbbell className="w-4 h-4 text-orange-500" />
+                            <span className="text-sm font-medium text-orange-700">실기</span>
+                            {result.silgiRatio && (
+                              <span className="text-xs text-orange-500">({result.silgiRatio}%)</span>
+                            )}
+                          </div>
+                          <p className="text-2xl font-bold text-orange-700">
+                            {result.silgiScore?.toFixed(2) || '-'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
               })}
+
+              {results.length === 0 && (
+                <div className="py-12 text-center">
+                  <School className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">계산 결과가 없습니다.</p>
+                </div>
+              )}
             </div>
 
             {/* 입력 데이터 보기 (접기/펼치기) */}
@@ -319,7 +306,7 @@ export default function ResultPage() {
                 onClick={() => setShowDetails(!showDetails)}
                 className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
               >
-                <span className="font-medium text-gray-700">입력된 데이터 확인</span>
+                <span className="font-medium text-gray-700">입력한 정보 확인</span>
                 {showDetails ? (
                   <ChevronUp className="w-5 h-5 text-gray-400" />
                 ) : (
@@ -342,11 +329,11 @@ export default function ResultPage() {
                     <h4 className="font-medium text-gray-700">수능 성적</h4>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="flex justify-between py-1">
-                        <span className="text-gray-400">국어</span>
+                        <span className="text-gray-400">국어 ({suneungData.korean.subject})</span>
                         <span className="font-mono">{suneungData.korean.standardScore}점 / {suneungData.korean.grade}등급</span>
                       </div>
                       <div className="flex justify-between py-1">
-                        <span className="text-gray-400">수학</span>
+                        <span className="text-gray-400">수학 ({suneungData.math.subject})</span>
                         <span className="font-mono">{suneungData.math.standardScore}점 / {suneungData.math.grade}등급</span>
                       </div>
                       <div className="flex justify-between py-1">
@@ -356,6 +343,14 @@ export default function ResultPage() {
                       <div className="flex justify-between py-1">
                         <span className="text-gray-400">한국사</span>
                         <span className="font-mono">{suneungData.history.grade}등급</span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span className="text-gray-400">탐구1 ({suneungData.tamgu1.subject})</span>
+                        <span className="font-mono">{suneungData.tamgu1.standardScore}점</span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span className="text-gray-400">탐구2 ({suneungData.tamgu2.subject})</span>
+                        <span className="font-mono">{suneungData.tamgu2.standardScore}점</span>
                       </div>
                     </div>
                   </div>
@@ -401,7 +396,7 @@ export default function ResultPage() {
             <Link href="/" className="flex-1">
               <Button className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 rounded-xl">
                 <Home className="w-4 h-4 mr-2" />
-                홈으로
+                처음으로
               </Button>
             </Link>
           </div>
