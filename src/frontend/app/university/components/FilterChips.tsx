@@ -35,11 +35,11 @@ export function FilterChips({
   onRegionChange,
 }: FilterChipsProps) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       {/* 군 선택 */}
       <div>
-        <label className="text-sm font-medium text-text-secondary mb-2 block">
-          군 선택
+        <label className="text-sm font-medium text-gray-600 mb-2 block">
+          모집 군
         </label>
         <div className="flex gap-2 flex-wrap">
           {GROUP_OPTIONS.map((option) => (
@@ -49,13 +49,12 @@ export function FilterChips({
               className={`
                 px-4 py-2
                 text-sm font-medium
-                rounded-lg
+                rounded-xl
                 transition-all duration-150
-                active:scale-95
                 ${
                   selectedGroup === option.value
-                    ? 'bg-accent text-white'
-                    : 'bg-bg-tertiary text-text-secondary hover:bg-bg-secondary border border-border'
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
                 }
               `}
             >
@@ -67,7 +66,7 @@ export function FilterChips({
 
       {/* 지역 선택 */}
       <div>
-        <label className="text-sm font-medium text-text-secondary mb-2 block">
+        <label className="text-sm font-medium text-gray-600 mb-2 block">
           지역
         </label>
         <div className="flex gap-2 flex-wrap">
@@ -78,13 +77,12 @@ export function FilterChips({
               className={`
                 px-4 py-2
                 text-sm font-medium
-                rounded-lg
+                rounded-xl
                 transition-all duration-150
-                active:scale-95
                 ${
                   selectedRegion === option.value
-                    ? 'bg-accent text-white'
-                    : 'bg-bg-tertiary text-text-secondary hover:bg-bg-secondary border border-border'
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
                 }
               `}
             >

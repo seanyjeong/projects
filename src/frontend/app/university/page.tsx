@@ -12,12 +12,14 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { FilterChips } from './components/FilterChips';
 import { SearchBar } from './components/SearchBar';
 import { UniversityCard } from './components/UniversityCard';
 import { UniversityGroup, Region, SelectedUniversities, University } from './types';
 import { universityApi } from '@/lib/api';
-import { ChevronRight } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, AlertTriangle, School } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function UniversitySearchPage() {
   const router = useRouter();
@@ -115,12 +117,39 @@ export default function UniversitySearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-primary pb-24">
-      {/* 헤더 */}
-      <div className="sticky top-0 z-10 bg-bg-primary border-b border-border">
-        <div className="p-5">
-          <h1 className="text-page-title mb-4">대학 검색</h1>
+    <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
+      {/* Navigation */}
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+        <div className="max-w-3xl mx-auto px-5 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/suneung" className="flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">S</span>
+              </div>
+              <span className="font-semibold text-gray-900">대학 선택</span>
+            </div>
+          </div>
+          <div className="text-sm text-gray-500">
+            2 / 3 단계
+          </div>
+        </div>
+      </nav>
 
+      {/* Progress Bar */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-3xl mx-auto">
+          <div className="h-1 bg-gray-100">
+            <div className="h-full w-2/3 bg-emerald-500 transition-all duration-300"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Section - Sticky */}
+      <div className="sticky top-16 z-40 bg-white border-b border-gray-100 shadow-sm">
+        <div className="max-w-3xl mx-auto px-5 py-4 space-y-4">
           {/* 필터 */}
           <FilterChips
             selectedGroup={selectedGroup}
@@ -130,86 +159,89 @@ export default function UniversitySearchPage() {
           />
 
           {/* 검색바 */}
-          <div className="mt-4">
-            <SearchBar value={keyword} onChange={setKeyword} />
-          </div>
+          <SearchBar value={keyword} onChange={setKeyword} />
 
           {/* 선택 개수 표시 */}
-          {selectedCount > 0 && (
-            <div className="mt-3 flex items-center justify-between text-sm">
-              <span className="text-text-secondary">
-                선택된 대학: <span className="font-semibold text-accent">{selectedCount}</span>개
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">
+              검색 결과 <span className="font-semibold text-gray-900">{filteredUniversities.length}</span>개
+            </span>
+            {selectedCount > 0 && (
+              <span className="text-emerald-600 font-medium">
+                {selectedCount}개 선택됨 (가/나/다 각 1개)
               </span>
-              <span className="text-text-tertiary">
-                (최대 3개: 가/나/다 각 1개)
-              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 대학 목록 - Scrollable */}
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-3xl mx-auto px-5 py-6 pb-32">
+          {loading ? (
+            <div className="py-16 text-center">
+              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mx-auto mb-4" />
+              <p className="text-gray-500">대학 목록을 불러오는 중...</p>
+            </div>
+          ) : error ? (
+            <div className="py-16 text-center">
+              <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-8 h-8 text-red-500" />
+              </div>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors"
+              >
+                다시 시도
+              </button>
+            </div>
+          ) : filteredUniversities.length === 0 ? (
+            <div className="py-16 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <School className="w-8 h-8 text-gray-400" />
+              </div>
+              <p className="text-gray-500">검색 결과가 없습니다</p>
+              <p className="text-sm text-gray-400 mt-2">다른 검색어나 필터를 시도해보세요</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {filteredUniversities.map((university) => {
+                const isSelected = selectedUniversities[university.group]?.id === university.id;
+
+                return (
+                  <UniversityCard
+                    key={university.id}
+                    university={university}
+                    isSelected={isSelected}
+                    onSelect={handleSelectUniversity}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
       </div>
 
-      {/* 대학 목록 */}
-      <div className="p-5">
-        {loading ? (
-          <div className="py-16 text-center">
-            <div className="inline-block w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-text-secondary">대학 목록을 불러오는 중...</p>
-          </div>
-        ) : error ? (
-          <div className="py-16 text-center">
-            <div className="text-4xl mb-4">⚠️</div>
-            <p className="text-text-secondary mb-4">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover"
-            >
-              다시 시도
-            </button>
-          </div>
-        ) : filteredUniversities.length === 0 ? (
-          <div className="py-16 text-center">
-            <p className="text-text-secondary">검색 결과가 없습니다</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {filteredUniversities.map((university) => {
-              const isSelected = selectedUniversities[university.group]?.id === university.id;
-
-              return (
-                <UniversityCard
-                  key={university.id}
-                  university={university}
-                  isSelected={isSelected}
-                  onSelect={handleSelectUniversity}
-                />
-              );
-            })}
-          </div>
-        )}
-      </div>
-
       {/* 하단 고정 버튼 */}
-      {selectedCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 p-5 bg-bg-primary border-t border-border">
-          <button
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-100">
+        <div className="max-w-3xl mx-auto px-5 py-4 safe-bottom">
+          <Button
             onClick={handleNext}
-            className="
-              w-full h-12
-              px-6
-              bg-accent hover:bg-accent-hover
-              text-white
-              text-base font-medium
-              rounded-lg
-              transition-all duration-150
-              active:scale-[0.98]
-              flex items-center justify-center gap-2
-            "
+            disabled={selectedCount === 0}
+            className="w-full h-12 text-base font-semibold bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-200 disabled:text-gray-400 rounded-xl"
+            size="lg"
           >
-            다음: 실기 기록 입력
-            <ChevronRight className="w-5 h-5" strokeWidth={2} />
-          </button>
+            다음 단계: 실기 기록 입력
+            <ArrowRight className="ml-2 w-5 h-5" />
+          </Button>
+          {selectedCount === 0 && (
+            <p className="text-center text-sm text-gray-500 mt-2">
+              최소 1개 이상의 대학을 선택해주세요
+            </p>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
